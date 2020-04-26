@@ -3,7 +3,6 @@ import java.net.*;
 import java.io.*;
 import java.util.*;
 
-
 //The Client that can be run as a console
 public class Client  {
 	
@@ -135,7 +134,8 @@ public class Client  {
 	 * If the serverAddress is not specified "localHost" is used
 	 * If the username is not specified "Anonymous" is used
 	 */
-	public static void main(String[] args) {
+	public static void main(String[] args) 
+	{
 		// default values if not entered
 		int portNumber = 1500;
 		String serverAddress = "localhost";
@@ -185,21 +185,27 @@ public class Client  {
 		System.out.println("4. Type 'LOGOUT' without quotes to logoff from server");
 		
 		// infinite loop to get the input from the user
-		while(true) {
+		while(true) 
+		{
+			
 			System.out.print("> ");
 			// read message from user
 			String msg = scan.nextLine();
 			// logout if message is LOGOUT
-			if(msg.equalsIgnoreCase("LOGOUT")) {
+			if(msg.equalsIgnoreCase("LOGOUT")) 
+			{
 				client.sendMessage(new ChatMessage(ChatMessage.LOGOUT, ""));
 				break;
 			}
 			// message to check who are present in chatroom
-			else if(msg.equalsIgnoreCase("WHOISIN")) {
+			else if(msg.equalsIgnoreCase("WHOISIN")) 
+			{
+				
 				client.sendMessage(new ChatMessage(ChatMessage.WHOISIN, ""));				
 			}
 			// regular text message
-			else {
+			else 
+			{
 				client.sendMessage(new ChatMessage(ChatMessage.MESSAGE, msg));
 			}
 		}
@@ -212,11 +218,15 @@ public class Client  {
 	/*
 	 * a class that waits for the message from the server
 	 */
-	class ListenFromServer extends Thread {
+	class ListenFromServer extends Thread 
+	{
 
-		public void run() {
-			while(true) {
-				try {
+		public void run() 
+		{
+			while(true) 
+			{
+				try 
+				{
 					// read the message form the input datastream
 					String msg = (String) sInput.readObject();
 					// print the message

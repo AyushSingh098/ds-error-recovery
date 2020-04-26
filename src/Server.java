@@ -4,24 +4,37 @@ import java.net.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+import java.util.logging.ConsoleHandler;
+import java.util.logging.FileHandler;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 // the server that can be run as a console
-public class Server {
+public class Server 
+{
 	// a unique ID for each connection
 	private static int uniqueId;
+
 	// an ArrayList to keep the list of the Client
 	private ArrayList<ClientThread> al;
+
 	// to display time
 	private SimpleDateFormat sdf;
+
 	// the port number to listen for connection
 	private int port;
+
 	// to check if server is running
 	private boolean keepGoing;
+
 	// notification
 	private String notif = " *** ";
 	
 	//constructor that receive the port to listen to for connection as parameter
 	
-	public Server(int port) {
+	public Server(int port) 
+	{
 		// the port
 		this.port = port;
 		// to display hh:mm:ss
@@ -30,7 +43,8 @@ public class Server {
 		al = new ArrayList<ClientThread>();
 	}
 	
-	public void start() {
+	public void start() 
+	{
 		keepGoing = true;
 		//create socket server and wait for connection requests 
 		try 
@@ -45,22 +59,27 @@ public class Server {
 				
 				// accept connection if requested from client
 				Socket socket = serverSocket.accept();
+
 				// break if server stoped
 				if(!keepGoing)
 					break;
+
 				// if client is connected, create its thread
 				ClientThread t = new ClientThread(socket);
+
 				//add this client to arraylist
 				al.add(t);
-				
 				t.start();
 			}
 			// try to stop the server
-			try {
+			try 
+			{
 				serverSocket.close();
-				for(int i = 0; i < al.size(); ++i) {
+				for(int i = 0; i < al.size(); ++i) 
+				{
 					ClientThread tc = al.get(i);
-					try {
+					try 
+					{
 					// close all data streams and socket
 					tc.sInput.close();
 					tc.sOutput.close();
@@ -70,34 +89,41 @@ public class Server {
 					}
 				}
 			}
-			catch(Exception e) {
+			catch(Exception e) 
+			{
 				display("Exception closing the server and clients: " + e);
 			}
 		}
-		catch (IOException e) {
+		catch (IOException e) 
+		{
             String msg = sdf.format(new Date()) + " Exception on new ServerSocket: " + e + "\n";
 			display(msg);
 		}
 	}
 	
 	// to stop the server
-	protected void stop() {
+	protected void stop() 
+	{
 		keepGoing = false;
-		try {
+		try 
+		{
 			new Socket("localhost", port);
 		}
-		catch(Exception e) {
+		catch(Exception e) 
+		{
 		}
 	}
 	
 	// Display an event to the console
-	private void display(String msg) {
+	private void display(String msg) 
+	{
 		String time = sdf.format(new Date()) + " " + msg;
 		System.out.println(time);
 	}
 	
 	// to broadcast a message to all Clients
-	private synchronized boolean broadcast(String message) {
+	private synchronized boolean broadcast(String message) 
+	{
 		// add timestamp to the message
 		String time = sdf.format(new Date());
 		
@@ -107,7 +133,6 @@ public class Server {
 		boolean isPrivate = false;
 		if(w[1].charAt(0)=='@') 
 			isPrivate=true;
-		
 		
 		// if private message, send message to mentioned username only
 		if(isPrivate==true)
@@ -133,9 +158,6 @@ public class Server {
 					found=true;
 					break;
 				}
-				
-				
-				
 			}
 			// mentioned user not found, return false
 			if(found!=true)
@@ -167,11 +189,12 @@ public class Server {
 	}
 
 	// if client sent LOGOUT message to exit
-	synchronized void remove(int id) {
-		
+	synchronized void remove(int id) 
+	{
 		String disconnectedClient = "";
 		// scan the array list until we found the Id
-		for(int i = 0; i < al.size(); ++i) {
+		for(int i = 0; i < al.size(); ++i) 
+		{
 			ClientThread ct = al.get(i);
 			// if found remove it
 			if(ct.id == id) {
@@ -189,15 +212,19 @@ public class Server {
 	 * > java Server portNumber
 	 * If the port number is not specified 1500 is used
 	 */ 
-	public static void main(String[] args) {
+	public static void main(String[] args) 
+	{
 		// start server on port 1500 unless a PortNumber is specified 
 		int portNumber = 1500;
-		switch(args.length) {
+		switch(args.length) 
+		{
 			case 1:
-				try {
+				try 
+				{
 					portNumber = Integer.parseInt(args[0]);
 				}
-				catch(Exception e) {
+				catch(Exception e) 
+				{
 					System.out.println("Invalid port number.");
 					System.out.println("Usage is: > java Server [portNumber]");
 					return;
@@ -215,27 +242,65 @@ public class Server {
 	}
 
 	// One instance of this thread will run for each client
-	class ClientThread extends Thread {
+	class ClientThread extends Thread 
+	{
+		Logger LOGGER;
+
+		Handler consoleHandler = null;
+        Handler fileHandler  = null;
+
 		// the socket to get messages from client
 		Socket socket;
 		ObjectInputStream sInput;
 		ObjectOutputStream sOutput;
 		// my unique id (easier for deconnection)
+
 		int id;
+
 		// the Username of the Client
 		String username;
+
 		// message object to recieve message and its type
 		ChatMessage cm;
+
 		// timestamp
 		String date;
 
 		// Constructor
-		ClientThread(Socket socket) {
+		ClientThread(Socket socket) 
+		{
 			// a unique id
 			id = ++uniqueId;
 			this.socket = socket;
+
+			LOGGER = Logger.getLogger("Logger-"+id);
+
 			//Creating both Data Stream
 			System.out.println("Thread trying to create Object Input/Output Streams");
+
+			try{
+            //Creating consoleHandler and fileHandler
+            consoleHandler = new ConsoleHandler();
+            fileHandler  = new FileHandler("./"+id+"_log.log");
+             
+            //Assigning handlers to LOGGER object
+            LOGGER.addHandler(consoleHandler);
+            LOGGER.addHandler(fileHandler);
+             
+            //Setting levels to handlers and LOGGER
+            consoleHandler.setLevel(Level.ALL);
+            fileHandler.setLevel(Level.ALL);
+            LOGGER.setLevel(Level.ALL);
+             
+            LOGGER.config("Configuration done.");
+             
+            //Console handler removed
+            LOGGER.removeHandler(consoleHandler);
+             
+            LOGGER.log(Level.FINE, "Finer logged");
+        }catch(IOException exception){
+            LOGGER.log(Level.SEVERE, "Error occur in FileHandler.", exception);
+        }
 			try
 			{
 				sOutput = new ObjectOutputStream(socket.getOutputStream());
@@ -244,54 +309,69 @@ public class Server {
 				username = (String) sInput.readObject();
 				broadcast(notif + username + " has joined the room." + notif);
 			}
-			catch (IOException e) {
+			catch (IOException e) 
+			{
 				display("Exception creating new Input/output Streams: " + e);
 				return;
 			}
-			catch (ClassNotFoundException e) {
+			catch (ClassNotFoundException e) 
+			{
 			}
             date = new Date().toString() + "\n";
 		}
 		
-		public String getUsername() {
+		public String getUsername() 
+		{
 			return username;
 		}
 
-		public void setUsername(String username) {
+		public void setUsername(String username) 
+		{
 			this.username = username;
 		}
 
 		// infinite loop to read and forward message
-		public void run() {
+		public void run() 
+		{
 			// to loop until LOGOUT
 			boolean keepGoing = true;
-			while(keepGoing) {
+			while(keepGoing) 
+			{
 				// read a String (which is an object)
-				try {
+				try 
+				{
 					cm = (ChatMessage) sInput.readObject();
 				}
-				catch (IOException e) {
+				catch (IOException e) 
+				{
 					display(username + " Exception reading Streams: " + e);
 					break;				
 				}
-				catch(ClassNotFoundException e2) {
+				catch(ClassNotFoundException e2) 
+				{
 					break;
 				}
+
+				LOGGER.info("Logger Name: "+LOGGER.getName());
 				// get the message from the ChatMessage object received
 				String message = cm.getMessage();
 
 				// different actions based on type message
-				switch(cm.getType()) {
+				switch(cm.getType()) 
+				{
 
 				case ChatMessage.MESSAGE:
 					boolean confirmation =  broadcast(username + ": " + message);
-					if(confirmation==false){
+					if(confirmation==false)
+					{
 						String msg = notif + "Sorry. No such user exists." + notif;
 						writeMsg(msg);
+						LOGGER.info("Wrong User information entered");
 					}
 					break;
 				case ChatMessage.LOGOUT:
 					display(username + " disconnected with a LOGOUT message.");
+					LOGGER.info("User :"+username+" has Logout");
 					keepGoing = false;
 					break;
 				case ChatMessage.WHOISIN:
@@ -301,43 +381,54 @@ public class Server {
 						ClientThread ct = al.get(i);
 						writeMsg((i+1) + ") " + ct.username + " since " + ct.date);
 					}
+					LOGGER.info("User :"+username+" checked all the available users");
 					break;
 				}
 			}
 			// if out of the loop then disconnected and remove from client list
+			LOGGER.info("User :"+username+"id: "+id+" has disconnected");
 			remove(id);
 			close();
 		}
 		
 		// close everything
-		private void close() {
-			try {
+		private void close() 
+		{
+			try 
+			{
 				if(sOutput != null) sOutput.close();
 			}
 			catch(Exception e) {}
-			try {
+			try 
+			{
 				if(sInput != null) sInput.close();
 			}
 			catch(Exception e) {};
-			try {
+			try 
+			{
 				if(socket != null) socket.close();
 			}
 			catch (Exception e) {}
 		}
 
 		// write a String to the Client output stream
-		private boolean writeMsg(String msg) {
+		private boolean writeMsg(String msg) 
+		{
 			// if Client is still connected send the message to it
-			if(!socket.isConnected()) {
+			if(!socket.isConnected()) 
+			{
 				close();
 				return false;
 			}
 			// write the message to the stream
-			try {
+			try 
+			{
 				sOutput.writeObject(msg);
+				LOGGER.info("User :"+username+"id: "+id+" sent the message :"+msg);
 			}
 			// if an error occurs, do not abort just inform the user
-			catch(IOException e) {
+			catch(IOException e) 
+			{
 				display(notif + "Error sending message to " + username + notif);
 				display(e.toString());
 			}
