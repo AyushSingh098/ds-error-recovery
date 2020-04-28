@@ -4,12 +4,8 @@ import java.net.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-import java.util.logging.ConsoleHandler;
-import java.util.logging.FileHandler;
-import java.util.logging.Handler;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
+//TODO -- ADDING LOG FILE
 // the server that can be run as a console
 public class Server 
 {
@@ -30,6 +26,12 @@ public class Server
 
 	// notification
 	private String notif = " *** ";
+
+	//Queue to maintain the requests from the processes for the CS
+    static volatile Queue<String> RequestsQueue = new LinkedList<>();;
+    
+    //Variable to store the available resource
+    static volatile Resource AvailableResource;
 	
 	//constructor that receive the port to listen to for connection as parameter
 	
@@ -41,6 +43,7 @@ public class Server
 		sdf = new SimpleDateFormat("HH:mm:ss");
 		// an ArrayList to keep the list of the Client
 		al = new ArrayList<ClientThread>();
+		AvailableResource = new Resource(50,50,50,50);
 	}
 	
 	public void start() 
@@ -244,10 +247,6 @@ public class Server
 	// One instance of this thread will run for each client
 	class ClientThread extends Thread 
 	{
-		Logger LOGGER;
-
-		Handler consoleHandler = null;
-        Handler fileHandler  = null;
 
 		// the socket to get messages from client
 		Socket socket;
@@ -273,34 +272,9 @@ public class Server
 			id = ++uniqueId;
 			this.socket = socket;
 
-			LOGGER = Logger.getLogger("Logger-"+id);
-
 			//Creating both Data Stream
 			System.out.println("Thread trying to create Object Input/Output Streams");
 
-			try{
-            //Creating consoleHandler and fileHandler
-            consoleHandler = new ConsoleHandler();
-            fileHandler  = new FileHandler("./"+id+"_log.log");
-             
-            //Assigning handlers to LOGGER object
-            LOGGER.addHandler(consoleHandler);
-            LOGGER.addHandler(fileHandler);
-             
-            //Setting levels to handlers and LOGGER
-            consoleHandler.setLevel(Level.ALL);
-            fileHandler.setLevel(Level.ALL);
-            LOGGER.setLevel(Level.ALL);
-             
-            LOGGER.config("Configuration done.");
-             
-            //Console handler removed
-            LOGGER.removeHandler(consoleHandler);
-             
-            LOGGER.log(Level.FINE, "Finer logged");
-        }catch(IOException exception){
-            LOGGER.log(Level.SEVERE, "Error occur in FileHandler.", exception);
-        }
 			try
 			{
 				sOutput = new ObjectOutputStream(socket.getOutputStream());
@@ -330,11 +304,61 @@ public class Server
 			this.username = username;
 		}
 
+		private synchronized int CheckAvailable(Resource request)
+		{
+		if(Server.AvailableResource.A >= request.A && Server.AvailableResource.B >= request.B
+		        && Server.AvailableResource.C >= request.C && Server.AvailableResource.D >= request.D  )
+		{
+		    return 1;
+		}
+
+		return 0;
+		}
+
+		private synchronized void RequestGrant(Resource request)
+		{
+		Server.AvailableResource.A -= request.A;
+		Server.AvailableResource.B -= request.B;
+		Server.AvailableResource.C -= request.C;
+		Server.AvailableResource.D -= request.D;
+		}
+
+		public void checkRequest(Resource request) throws IOException, InterruptedException
+		{
+		//check if the available instances of the resources are more than the requested
+		int flag = CheckAvailable(request);
+
+		//Put in queue if not available
+		if(flag == 0 )
+		{
+		    //Add the process to the current queue
+		    Server.RequestsQueue.add(Thread.currentThread().getName());
+		    System.out.println(Thread.currentThread().getName()+"added to queue");
+		    while(!Server.RequestsQueue.element().equalsIgnoreCase(Thread.currentThread().getName()))
+		    {
+		        Thread.sleep(200);
+		    }
+		    while(CheckAvailable(request)==0)
+		    {
+		        Thread.currentThread().sleep(200);
+		    }
+		    Server.RequestsQueue.remove();
+		}
+		RequestGrant(request);
+		writeMsg("Request has been Granted");
+		}
+
+
 		// infinite loop to read and forward message
-		public void run() 
+		public void run()
 		{
 			// to loop until LOGOUT
+			Resource request = null;
+			Resource totalRequest = null;
+			int rA, rB, rC, rD;
+			int new_rA, new_rB, new_rC, new_rD;
 			boolean keepGoing = true;
+			boolean firstReq = false;
 			while(keepGoing) 
 			{
 				// read a String (which is an object)
@@ -351,27 +375,73 @@ public class Server
 				{
 					break;
 				}
-
-				LOGGER.info("Logger Name: "+LOGGER.getName());
 				// get the message from the ChatMessage object received
 				String message = cm.getMessage();
-
+				
 				// different actions based on type message
 				switch(cm.getType()) 
 				{
-
-				case ChatMessage.MESSAGE:
-					boolean confirmation =  broadcast(username + ": " + message);
-					if(confirmation==false)
-					{
-						String msg = notif + "Sorry. No such user exists." + notif;
-						writeMsg(msg);
-						LOGGER.info("Wrong User information entered");
-					}
+				case ChatMessage.VIEW:
+					writeMsg("A="+ Server.AvailableResource.A+"\nB="+ Server.AvailableResource.B+"\nC="+ Server.AvailableResource.C+"\nD="+ Server.AvailableResource.D);
 					break;
+
+				
+
+
+				case ChatMessage.REQUEST:
+					String[] arrOfStr = message.split(":", 5);
+					if(!firstReq)
+		            {
+		            	rA = Integer.parseInt(arrOfStr[1]);
+		            	rB = Integer.parseInt(arrOfStr[2]);
+		            	rC = Integer.parseInt(arrOfStr[3]);
+		            	rD = Integer.parseInt(arrOfStr[4]);
+		            	request = new Resource(rA , rB , rC , rD);
+		            	totalRequest = new Resource(rA , rB , rC , rD);
+		            	firstReq = true;
+		            }
+		            else
+		            {
+		            	new_rA = Integer.parseInt(arrOfStr[1]);
+		            	new_rB = Integer.parseInt(arrOfStr[2]);
+		            	new_rC = Integer.parseInt(arrOfStr[3]);
+		            	new_rD = Integer.parseInt(arrOfStr[4]);
+		            	request.A = new_rA;
+		            	request.B = new_rB;
+		            	request.C = new_rC;
+		            	request.D = new_rD;
+		            	totalRequest.A += new_rA;
+		            	totalRequest.B += new_rB; 
+		            	totalRequest.C += new_rC;
+		            	totalRequest.D += new_rD;
+		            }
+
+		            try
+		            {
+	                	checkRequest(request);
+	                }
+	                catch(Exception e)
+	                {
+	                	break;
+	                }
+	                break;
+
+	            case ChatMessage.EXIT:
+					synchronized(this)
+                    {
+                        Server.AvailableResource.A += totalRequest.A;
+                        Server.AvailableResource.B += totalRequest.B;
+                        Server.AvailableResource.C += totalRequest.C;
+                        Server.AvailableResource.D += totalRequest.D;
+                    }
+                    totalRequest.A =0;
+		            totalRequest.B =0;
+		            totalRequest.C =0;
+		            totalRequest.D =0;
+				break;
+				
 				case ChatMessage.LOGOUT:
 					display(username + " disconnected with a LOGOUT message.");
-					LOGGER.info("User :"+username+" has Logout");
 					keepGoing = false;
 					break;
 				case ChatMessage.WHOISIN:
@@ -381,12 +451,12 @@ public class Server
 						ClientThread ct = al.get(i);
 						writeMsg((i+1) + ") " + ct.username + " since " + ct.date);
 					}
-					LOGGER.info("User :"+username+" checked all the available users");
+					
 					break;
 				}
 			}
 			// if out of the loop then disconnected and remove from client list
-			LOGGER.info("User :"+username+"id: "+id+" has disconnected");
+			
 			remove(id);
 			close();
 		}
@@ -424,7 +494,6 @@ public class Server
 			try 
 			{
 				sOutput.writeObject(msg);
-				LOGGER.info("User :"+username+"id: "+id+" sent the message :"+msg);
 			}
 			// if an error occurs, do not abort just inform the user
 			catch(IOException e) 

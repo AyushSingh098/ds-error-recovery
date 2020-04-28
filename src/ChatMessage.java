@@ -7,18 +7,19 @@ import java.io.*;
  * need to count bytes or to wait for a line feed at the end of the frame
  */
 
-public class ChatMessage implements Serializable {
-
+public class ChatMessage implements Serializable
+{
 	// The different types of message sent by the Client
 	// WHOISIN to receive the list of the users connected
 	// MESSAGE an ordinary text message
 	// LOGOUT to disconnect from the Server
-	static final int WHOISIN = 0, MESSAGE = 1, LOGOUT = 2;
+	static final int WHOISIN = 0, REQUEST = 1, LOGOUT = 2, VIEW = 3, EXIT = 4, GETLOG = 5;
 	private int type;
 	private String message;
 	
 	// constructor
-	ChatMessage(int type, String message) {
+	ChatMessage(int type, String message)
+	{
 		this.type = type;
 		this.message = message;
 	}

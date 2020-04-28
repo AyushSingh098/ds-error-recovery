@@ -103,7 +103,6 @@ public class Client  {
 			display("Exception writing to server: " + e);
 		}
 	}
-
 	/*
 	 * When something goes wrong
 	 * Close the Input/Output streams and disconnect
@@ -179,11 +178,13 @@ public class Client  {
 		
 		System.out.println("\nHello.! You are connected to the Server Now.");
 		System.out.println("Instructions:");
-		System.out.println("1. Simply type the message to send broadcast to all active clients");
-		System.out.println("2. Type '@username<space>yourmessage' without quotes to send message to desired client");
-		System.out.println("3. Type 'WHOISIN' without quotes to see list of active clients");
-		System.out.println("4. Type 'LOGOUT' without quotes to logoff from server");
-		
+		System.out.println("1. Type 'VIEW' to view all the resources available");
+		System.out.println("2. Type 'REQUEST' to request for resources (eg > REQUEST:23:45:33:45");
+		System.out.println("3. Type 'EXIT' to release allocated resources available");
+		System.out.println("4. Type 'GETLOG' to access the Client LOG file");
+		System.out.println("5. Type 'WHOISIN' without quotes to see list of active clients");
+		System.out.println("6. Type 'LOGOUT' without quotes to logoff from server");
+
 		// infinite loop to get the input from the user
 		while(true) 
 		{
@@ -203,10 +204,22 @@ public class Client  {
 				
 				client.sendMessage(new ChatMessage(ChatMessage.WHOISIN, ""));				
 			}
+			else if(msg.equalsIgnoreCase("VIEW"))
+			{
+				client.sendMessage(new ChatMessage(ChatMessage.VIEW, ""));
+			}
+			else if(msg.equalsIgnoreCase("EXIT"))
+			{
+				client.sendMessage(new ChatMessage(ChatMessage.EXIT, ""));
+			}
+			else if(msg.equalsIgnoreCase("GETLOG"))
+			{
+				client.sendMessage(new ChatMessage(ChatMessage.GETLOG, ""));
+			}  
 			// regular text message
 			else 
 			{
-				client.sendMessage(new ChatMessage(ChatMessage.MESSAGE, msg));
+				client.sendMessage(new ChatMessage(ChatMessage.REQUEST, msg));
 			}
 		}
 		// close resource
