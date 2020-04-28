@@ -4,6 +4,7 @@ import java.net.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+import java.nio.file.*;
 
 //TODO -- ADDING LOG FILE
 // the server that can be run as a console
@@ -40,7 +41,7 @@ public class Server
 		// the port
 		this.port = port;
 		// to display hh:mm:ss
-		sdf = new SimpleDateFormat("HH:mm:ss");
+		sdf = new SimpleDateFormat("HH:mm:ss.SSS");
 		// an ArrayList to keep the list of the Client
 		al = new ArrayList<ClientThread>();
 		AvailableResource = new Resource(50,50,50,50);
@@ -256,6 +257,9 @@ public class Server
 
 		int id;
 
+
+		Path path;
+
 		// the Username of the Client
 		String username;
 
@@ -264,7 +268,6 @@ public class Server
 
 		// timestamp
 		String date;
-
 		// Constructor
 		ClientThread(Socket socket) 
 		{
@@ -281,7 +284,7 @@ public class Server
 				sInput  = new ObjectInputStream(socket.getInputStream());
 				// read the username
 				username = (String) sInput.readObject();
-				broadcast(notif + username + " has joined the room." + notif);
+				//broadcast(notif + username + " has joined the room." + notif);
 			}
 			catch (IOException e) 
 			{
@@ -291,7 +294,13 @@ public class Server
 			catch (ClassNotFoundException e) 
 			{
 			}
-            date = new Date().toString() + "\n";
+			path = Paths.get("./"+username+"_log.txt");
+			try{
+				Files.write(path, (username+"'s LOG FILE \n").getBytes());}
+				catch(Exception e)
+				{}
+            date = new Date().toString();
+
 		}
 		
 		public String getUsername() 
@@ -309,27 +318,43 @@ public class Server
 		if(Server.AvailableResource.A >= request.A && Server.AvailableResource.B >= request.B
 		        && Server.AvailableResource.C >= request.C && Server.AvailableResource.D >= request.D  )
 		{
+			String yes =String.format("%s - A: %d B: %d C: %d D: %d Y \n", date, request.A, request.B, request.C, request.D);
+			try
+            {
+            	Files.write(path, yes.getBytes(), StandardOpenOption.APPEND);
+            }
+            catch(Exception e)
+            {
+            }
 		    return 1;
 		}
-
+			String no = String.format("%s - A: %d B: %d C: %d D: %d N \n", date, request.A, request.B, request.C, request.D);
+			try
+            {
+            	Files.write(path, no.getBytes(), StandardOpenOption.APPEND);
+            }
+            catch(Exception e)
+            {
+            }
 		return 0;
 		}
 
 		private synchronized void RequestGrant(Resource request)
 		{
-		Server.AvailableResource.A -= request.A;
-		Server.AvailableResource.B -= request.B;
-		Server.AvailableResource.C -= request.C;
-		Server.AvailableResource.D -= request.D;
+			Server.AvailableResource.A -= request.A;
+			Server.AvailableResource.B -= request.B;
+			Server.AvailableResource.C -= request.C;
+			Server.AvailableResource.D -= request.D;
 		}
 
 		public void checkRequest(Resource request) throws IOException, InterruptedException
 		{
 		//check if the available instances of the resources are more than the requested
+            
 		int flag = CheckAvailable(request);
 
 		//Put in queue if not available
-		if(flag == 0 )
+		if(flag == 0)
 		{
 		    //Add the process to the current queue
 		    Server.RequestsQueue.add(Thread.currentThread().getName());
@@ -385,13 +410,11 @@ public class Server
 					writeMsg("A="+ Server.AvailableResource.A+"\nB="+ Server.AvailableResource.B+"\nC="+ Server.AvailableResource.C+"\nD="+ Server.AvailableResource.D);
 					break;
 
-				
-
-
 				case ChatMessage.REQUEST:
 					String[] arrOfStr = message.split(":", 5);
 					if(!firstReq)
 		            {
+
 		            	rA = Integer.parseInt(arrOfStr[1]);
 		            	rB = Integer.parseInt(arrOfStr[2]);
 		            	rC = Integer.parseInt(arrOfStr[3]);
