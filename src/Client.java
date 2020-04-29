@@ -2,6 +2,8 @@
 import java.net.*;
 import java.io.*;
 import java.util.*;
+import java.lang.*;
+import java.nio.file.*;
 
 //The Client that can be run as a console
 public class Client  {
@@ -234,14 +236,44 @@ public class Client  {
 	class ListenFromServer extends Thread 
 	{
 
-		public void run() 
+		public void run()
 		{
 			while(true) 
 			{
 				try 
 				{
+
 					// read the message form the input datastream
 					String msg = (String) sInput.readObject();
+					File log_file = null;
+					if(msg.equalsIgnoreCase("LOG FILE ACCESSED"))
+					{
+						//File received from the server
+						String file = (String) sInput.readObject();
+
+						//creating a new file client side
+						log_file = new File(username+"_log.txt");
+						
+						java.awt.Desktop.getDesktop().edit(log_file);
+						
+						try{Thread.sleep(5000);
+						}
+						catch(Exception e)
+						{}
+						
+						String edited  = new String(Files.readAllBytes(Paths.get(username+"_log.txt")));
+
+						if(file.equalsIgnoreCase(edited))
+						{
+							System.out.println("NO CHANGE");
+						} 
+						else
+						{
+							System.out.println("CHANGE KIYA BC");
+							sOutput.writeObject("CHANGE");
+						}
+
+					}
 					// print the message
 					System.out.println(msg);
 					System.out.print("> ");

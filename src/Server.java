@@ -361,11 +361,11 @@ public class Server
 		    System.out.println(Thread.currentThread().getName()+"added to queue");
 		    while(!Server.RequestsQueue.element().equalsIgnoreCase(Thread.currentThread().getName()))
 		    {
-		        Thread.sleep(200);
+		        Thread.sleep(1000);
 		    }
 		    while(CheckAvailable(request)==0)
 		    {
-		        Thread.currentThread().sleep(200);
+		        Thread.currentThread().sleep(1000);
 		    }
 		    Server.RequestsQueue.remove();
 		}
@@ -373,6 +373,7 @@ public class Server
 		writeMsg("Request has been Granted");
 		}
 
+		
 
 		// infinite loop to read and forward message
 		public void run()
@@ -410,11 +411,24 @@ public class Server
 					writeMsg("A="+ Server.AvailableResource.A+"\nB="+ Server.AvailableResource.B+"\nC="+ Server.AvailableResource.C+"\nD="+ Server.AvailableResource.D);
 					break;
 
+				case ChatMessage.GETLOG:
+					
+					try{sOutput.writeObject("LOG FILE ACCESSED");
+					writeMsg(new String(Files.readAllBytes(path)));
+					if(((String)sInput.readObject()).equalsIgnoreCase("CHANGE")){
+						broadcast(id +" : " + username + " HARAMI DAEMON THA. KHOPDI TOD SAALE KI ");
+						remove(id);
+						socket.close();
+					}
+				}
+				catch(Exception e){}
+
+					break;	
+
 				case ChatMessage.REQUEST:
 					String[] arrOfStr = message.split(":", 5);
 					if(!firstReq)
 		            {
-
 		            	rA = Integer.parseInt(arrOfStr[1]);
 		            	rB = Integer.parseInt(arrOfStr[2]);
 		            	rC = Integer.parseInt(arrOfStr[3]);
