@@ -385,6 +385,8 @@ public class Server
 			int new_rA, new_rB, new_rC, new_rD;
 			boolean keepGoing = true;
 			boolean firstReq = false;
+
+			
 			while(keepGoing) 
 			{
 				// read a String (which is an object)
@@ -413,14 +415,29 @@ public class Server
 
 				case ChatMessage.GETLOG:
 					
-					try{sOutput.writeObject("LOG FILE ACCESSED");
-					writeMsg(new String(Files.readAllBytes(path)));
-					if(((String)sInput.readObject()).equalsIgnoreCase("CHANGE")){
-						broadcast(id +" : " + username + " HARAMI DAEMON THA. KHOPDI TOD SAALE KI ");
-						remove(id);
-						socket.close();
+					try{
+						String log_file = new String(Files.readAllBytes(path));
+						sOutput.writeObject("LOG FILE ACCESSED");
+						writeMsg(log_file);
+					
+						if(((String)sInput.readObject()).equalsIgnoreCase(log_file))
+						{
+							writeMsg("NO CHANGES MADE: ACCHA BACCHA");
+						}
+						else
+						{
+							
+							broadcast(id +" : " + username + " DAEMON THA. KHOPDI PHOD SAALE KI ");
+							
+							//recovery code
+							Server.AvailableResource.A += totalRequest.A;
+                        	Server.AvailableResource.B += totalRequest.B;
+                        	Server.AvailableResource.C += totalRequest.C;
+                        	Server.AvailableResource.D += totalRequest.D;
+
+							keepGoing = false;
+						}
 					}
-				}
 				catch(Exception e){}
 
 					break;	
@@ -493,9 +510,8 @@ public class Server
 				}
 			}
 			// if out of the loop then disconnected and remove from client list
-			
-			remove(id);
-			close();
+				remove(id);
+				close();
 		}
 		
 		// close everything

@@ -263,15 +263,17 @@ public class Client  {
 						
 						String edited  = new String(Files.readAllBytes(Paths.get(username+"_log.txt")));
 
-						if(file.equalsIgnoreCase(edited))
-						{
-							System.out.println("NO CHANGE");
-						} 
-						else
-						{
-							System.out.println("CHANGE KIYA BC");
-							sOutput.writeObject("CHANGE");
-						}
+						//send file back to server
+						sOutput.writeObject(edited);
+						// if(file.equalsIgnoreCase(edited))
+						// {
+						// 	System.out.println("NO CHANGE");
+						// } 
+						// else
+						// {
+						// 	System.out.println("CHANGE KIYA BC");
+						// 	sOutput.writeObject("CHANGE");
+						// }
 
 					}
 					// print the message
