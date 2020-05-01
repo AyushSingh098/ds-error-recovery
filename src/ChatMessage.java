@@ -1,4 +1,3 @@
-
 import java.io.*;
 /*
  * This class defines the different type of messages that will be exchanged between the
@@ -11,9 +10,12 @@ public class ChatMessage implements Serializable
 {
 	// The different types of message sent by the Client
 	// WHOISIN to receive the list of the users connected
-	// MESSAGE an ordinary text message
+	// REQUEST to request resources from the server
+	// VIEW to view the currently  avaialble resources
+	// RELEASE to relase the currently allocated resources
+	// GETLOG to get the log file
 	// LOGOUT to disconnect from the Server
-	static final int WHOISIN = 0, REQUEST = 1, LOGOUT = 2, VIEW = 3, EXIT = 4, GETLOG = 5;
+	static final int WHOISIN = 0, REQUEST = 1, LOGOUT = 2, VIEW = 3, RELEASE = 4, GETLOG = 5;
 	private int type;
 	private String message;
 	
@@ -23,12 +25,12 @@ public class ChatMessage implements Serializable
 		this.type = type;
 		this.message = message;
 	}
-	
-	int getType() {
+	int getType() 
+	{
 		return type;
 	}
-
-	String getMessage() {
+	String getMessage() 
+	{
 		return message;
 	}
 }

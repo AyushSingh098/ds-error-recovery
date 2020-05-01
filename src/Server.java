@@ -34,17 +34,29 @@ public class Server
     //Variable to store the available resource
     static volatile Resource AvailableResource;
 	
-	//constructor that receive the port to listen to for connection as parameter
+    //Global Log File of Server
+    static volatile Path global_path;
 	
+	//constructor that receive the port to listen to for connection as parameter
 	public Server(int port) 
 	{
 		// the port
 		this.port = port;
 		// to display hh:mm:ss
 		sdf = new SimpleDateFormat("HH:mm:ss.SSS");
+		
 		// an ArrayList to keep the list of the Client
 		al = new ArrayList<ClientThread>();
+		
 		AvailableResource = new Resource(50,50,50,50);
+		global_path = Paths.get("./global_log.txt");
+		try
+		{
+			Files.write(global_path, ("GLOBAL LOG FILE \n Available Resources : "+ AvailableResource.A +":"+ AvailableResource.B +":"+ AvailableResource.C +":"+ AvailableResource.D ).getBytes());
+		}
+		catch(Exception e)
+		{}
+		
 	}
 	
 	public void start() 
@@ -130,66 +142,24 @@ public class Server
 	{
 		// add timestamp to the message
 		String time = sdf.format(new Date());
-		
-		// to check if message is private i.e. client to client message
-		String[] w = message.split(" ",3);
-		
-		boolean isPrivate = false;
-		if(w[1].charAt(0)=='@') 
-			isPrivate=true;
-		
-		// if private message, send message to mentioned username only
-		if(isPrivate==true)
-		{
-			String tocheck=w[1].substring(1, w[1].length());
+		String messageLf = time + " " + message + "\n";
 			
-			message=w[0]+w[2];
-			String messageLf = time + " " + message + "\n";
-			boolean found=false;
-			// we loop in reverse order to find the mentioned username
-			for(int y=al.size(); --y>=0;)
-			{
-				ClientThread ct1=al.get(y);
-				String check=ct1.getUsername();
-				if(check.equals(tocheck))
-				{
-					// try to write to the Client if it fails remove it from the list
-					if(!ct1.writeMsg(messageLf)) {
-						al.remove(y);
-						display("Disconnected Client " + ct1.username + " removed from list.");
-					}
-					// username found and delivered the message
-					found=true;
-					break;
-				}
-			}
-			// mentioned user not found, return false
-			if(found!=true)
-			{
-				return false; 
-			}
-		}
-		// if message is a broadcast message
-		else
-		{
-			String messageLf = time + " " + message + "\n";
-			// display message
-			System.out.print(messageLf);
+		// display message
+		System.out.print(messageLf);
 			
-			// we loop in reverse order in case we would have to remove a Client
-			// because it has disconnected
-			for(int i = al.size(); --i >= 0;) {
-				ClientThread ct = al.get(i);
-				// try to write to the Client if it fails remove it from the list
-				if(!ct.writeMsg(messageLf)) {
-					al.remove(i);
-					display("Disconnected Client " + ct.username + " removed from list.");
-				}
+		// we loop in reverse order in case we would have to remove a Client
+		// because it has disconnected
+		for(int i = al.size(); --i >= 0;) 
+		{
+			ClientThread ct = al.get(i);
+			// try to write to the Client if it fails remove it from the list
+			if(!ct.writeMsg(messageLf)) 
+			{
+				al.remove(i);
+				display("Disconnected Client " + ct.username + " removed from list.");
 			}
 		}
 		return true;
-		
-		
 	}
 
 	// if client sent LOGOUT message to exit
@@ -207,7 +177,7 @@ public class Server
 				break;
 			}
 		}
-		broadcast(notif + disconnectedClient + " has left the chat room." + notif);
+		broadcast(notif + disconnectedClient + " has left the connection from the server." + notif);
 	}
 	
 	/*
@@ -295,10 +265,12 @@ public class Server
 			{
 			}
 			path = Paths.get("./"+username+"_log.txt");
-			try{
-				Files.write(path, (username+"'s LOG FILE \n").getBytes());}
-				catch(Exception e)
-				{}
+			try
+			{
+				Files.write(path, (username.toUpperCase()+"'s LOG FILE \n DATE \t\t\t REQUEST \t\t STATUS \n").getBytes());
+			}
+			catch(Exception e)
+			{}
             date = new Date().toString();
 
 		}
@@ -322,6 +294,7 @@ public class Server
 			try
             {
             	Files.write(path, yes.getBytes(), StandardOpenOption.APPEND);
+            	Files.write(global_path,("\n"+username +" : "+ yes).getBytes(), StandardOpenOption.APPEND);
             }
             catch(Exception e)
             {
@@ -332,6 +305,7 @@ public class Server
 			try
             {
             	Files.write(path, no.getBytes(), StandardOpenOption.APPEND);
+            	Files.write(global_path,("\n"+username +" : "+ no).getBytes(), StandardOpenOption.APPEND);
             }
             catch(Exception e)
             {
@@ -350,7 +324,6 @@ public class Server
 		public void checkRequest(Resource request) throws IOException, InterruptedException
 		{
 		//check if the available instances of the resources are more than the requested
-            
 		int flag = CheckAvailable(request);
 
 		//Put in queue if not available
@@ -385,8 +358,6 @@ public class Server
 			int new_rA, new_rB, new_rC, new_rD;
 			boolean keepGoing = true;
 			boolean firstReq = false;
-
-			
 			while(keepGoing) 
 			{
 				// read a String (which is an object)
@@ -410,35 +381,38 @@ public class Server
 				switch(cm.getType()) 
 				{
 				case ChatMessage.VIEW:
-					writeMsg("A="+ Server.AvailableResource.A+"\nB="+ Server.AvailableResource.B+"\nC="+ Server.AvailableResource.C+"\nD="+ Server.AvailableResource.D);
+					writeMsg("\n A="+ Server.AvailableResource.A+"\nB="+ Server.AvailableResource.B+"\nC="+ Server.AvailableResource.C+"\nD="+ Server.AvailableResource.D);
 					break;
 
 				case ChatMessage.GETLOG:
 					
-					try{
+					try
+					{
 						String log_file = new String(Files.readAllBytes(path));
 						sOutput.writeObject("LOG FILE ACCESSED");
 						writeMsg(log_file);
 					
 						if(((String)sInput.readObject()).equalsIgnoreCase(log_file))
 						{
-							writeMsg("NO CHANGES MADE: ACCHA BACCHA");
+							writeMsg("NO CHANGES MADE BY THE CLIENT");
 						}
 						else
 						{
 							
-							broadcast(id +" : " + username + " DAEMON THA. KHOPDI PHOD SAALE KI ");
-							
+							broadcast(id +" : " + username + " IS A DAEMON CLIENT ");
+							keepGoing = false;
 							//recovery code
 							Server.AvailableResource.A += totalRequest.A;
                         	Server.AvailableResource.B += totalRequest.B;
                         	Server.AvailableResource.C += totalRequest.C;
                         	Server.AvailableResource.D += totalRequest.D;
-
-							keepGoing = false;
+                        	
+                        	Files.write(path,("\n DAEMON CLIENT. ALL THE RESOURCES ALLOCATED TO THIS CLIENT ARE TAKEN BACK.").getBytes(), StandardOpenOption.APPEND);
+                        	Files.write(global_path,("\n"+username +" : " + "DAEMON CLIENT. ALL THE RESOURCES ALLOCATED TO THIS CLIENT ARE TAKEN BACK. CURRENT RESOURCES STATUS : "+ AvailableResource.A +":"+ AvailableResource.B +":"+ AvailableResource.C +":"+ AvailableResource.D).getBytes(), StandardOpenOption.APPEND);
 						}
 					}
-				catch(Exception e){}
+				catch(Exception e)
+				{}
 
 					break;	
 
@@ -469,7 +443,6 @@ public class Server
 		            	totalRequest.C += new_rC;
 		            	totalRequest.D += new_rD;
 		            }
-
 		            try
 		            {
 	                	checkRequest(request);
@@ -480,7 +453,7 @@ public class Server
 	                }
 	                break;
 
-	            case ChatMessage.EXIT:
+	            case ChatMessage.RELEASE:
 					synchronized(this)
                     {
                         Server.AvailableResource.A += totalRequest.A;
@@ -492,6 +465,7 @@ public class Server
 		            totalRequest.B =0;
 		            totalRequest.C =0;
 		            totalRequest.D =0;
+		            writeMsg("Resources have been released successfully");
 				break;
 				
 				case ChatMessage.LOGOUT:
@@ -499,19 +473,20 @@ public class Server
 					keepGoing = false;
 					break;
 				case ChatMessage.WHOISIN:
+					
 					writeMsg("List of the users connected at " + sdf.format(new Date()) + "\n");
 					// send list of active clients
-					for(int i = 0; i < al.size(); ++i) {
+					for(int i = 0; i < al.size(); ++i) 
+					{
 						ClientThread ct = al.get(i);
 						writeMsg((i+1) + ") " + ct.username + " since " + ct.date);
 					}
-					
 					break;
 				}
 			}
 			// if out of the loop then disconnected and remove from client list
-				remove(id);
-				close();
+			remove(id);
+			close();
 		}
 		
 		// close everything
